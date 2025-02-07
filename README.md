@@ -10,6 +10,7 @@ Using the transitive property of these three values, a confident (albeit false p
 - Go version <= 1.23.6 if not using a compiled release.
 - A VirusTotal Enterprise account is *required*
 - IPInfo account (free tier is fine)
+
 These are read as environment variables so set them before running
 ## VirusTotal Enterprise API Key
 MacOS/Linux
@@ -28,6 +29,19 @@ MacOS/Linux
 Windows
 
 `set IPINFO_KEY=<IPINFO_KEY>`
+
+# Getting Started
+You can clone this repo and execute main without having to build it yourself. 
+Either provide a single IP or a TXT file with one IP per line.
+```
+git clone https://github.com/axelarator/infrasearch && cd infrasearch
+go run main.go <ip>
+go run main.go <file.txt>
+```
+
+The output prints the result along with creating an `out.json` file in the directory in which it was run.
+
+From there, the output is able to be parsed using `jq`. Below are some more complex queries to make more sense of the data. 
 
 ## Some JQ notes
 This will organize the output to quickly view SHA256 hashes and IPs that were also seeing downloading this hash.
@@ -62,13 +76,4 @@ This will organize the output so it shows the searched IP and possibly related I
     ...
   ]
 }
-```
-
-# Getting Started
-You can clone this repo and execute main without having to build it yourself. 
-Either provide a single IP or a TXT file with one IP per line.
-```
-git clone https://github.com/axelarator/infrasearch && cd infrasearch
-go run main.go <ip>
-go run main.go <file.txt>
 ```
