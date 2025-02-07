@@ -31,12 +31,18 @@ Windows
 `set IPINFO_KEY=<IPINFO_KEY>`
 
 # Getting Started
-You can clone this repo and execute main without having to build it yourself. 
+You can clone this repo and execute main without having to build it yourself.
+
 Either provide a single IP or a TXT file with one IP per line.
 ```
 git clone https://github.com/axelarator/infrasearch && cd infrasearch
 go run main.go <ip>
 go run main.go <file.txt>
+```
+The more recommended approach is to download a binary from the [Releases](https://github.com/axelarator/infrasearch/releases/tag/v1.0.0) section
+```
+./infrasearch <ip>
+./infrasearch <file.txt>
 ```
 
 The output prints the result along with creating an `out.json` file in the directory in which it was run.
