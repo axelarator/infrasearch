@@ -47,7 +47,7 @@ The more recommended approach is to download a binary from the [Releases](https:
 
 The output prints the result along with creating an `out.json` file in the directory in which it was run.
 
-From there, the output is able to be parsed using `jq`. Below are some more complex queries to make more sense of the data. 
+From there, the output is able to be parsed using `jq`. Below are some more complex queries to make sense of the data. 
 
 ## Some JQ notes
 This will organize the output to quickly view SHA256 hashes and IPs that were also seeing downloading this hash.
