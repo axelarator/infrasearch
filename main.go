@@ -57,6 +57,6 @@ func main() {
 	jq '.[]' out.json : standard JQ output
 	jq '[.[].ips] | add' out.json : will flatten the list to just IPs
 	jq '[.[].ips] | add | unique' out.json : removes duplicates and sorts
-	jq '{(.ips[].ip): [.ips[].downloads[].downloaded_by[].ip] | unique}' : the best output
-	jq reduce .ips[].downloads[] as $d ({}; .[$d.hash] = [$d.downloaded_by[].ip]) :
+	jq '{(.ips[].ip): [.ips[].downloads[].downloaded_by[].ip] | unique}' out.json: the best output
+	jq 'reduce .ips[].downloads[] as $d ({}; .[$d.hash] = [$d.downloaded_by[].ip])' out.json : organize IPs by hashes
 */
