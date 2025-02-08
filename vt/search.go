@@ -46,8 +46,14 @@ func (s *Client) HostSearch(q string) (IPData, error) {
 		}
 		var downloadedBy []DownloadedIP
 		for _, ip := range ips {
+			domains, _ := rDNS(ip)
 			geoInfo, _ := getGeolocation(ip)
-			downloadedBy = append(downloadedBy, geoInfo)
+			downloadedBy = append(downloadedBy, DownloadedIP{
+				IPs:             ip,
+				ResolvedDomains: domains,
+				Country:         geoInfo.Country,
+				ASN:             geoInfo.ASN,
+			})
 		}
 
 		downloads = append(downloads, HashInfo{

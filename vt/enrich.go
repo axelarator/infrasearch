@@ -20,7 +20,8 @@ func getGeolocation(ip string) (DownloadedIP, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&geo); err != nil {
 		return DownloadedIP{}, err
 	}
-	return geo, nil
+	return DownloadedIP{Country: geo.Country, ASN: geo.ASN}, nil
+
 }
 
 func rDNS(ip string) ([]string, error) {
