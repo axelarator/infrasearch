@@ -412,7 +412,7 @@ type HashSearch struct {
 	} `json:"links"`
 }
 
-type TopLevel struct {
+type FinalOutput struct {
 	IPs []IPData `json:"ips"`
 }
 
@@ -422,15 +422,15 @@ type IPData struct {
 	NoData string     `json:"no_data,omitempty"`
 }
 type HashInfo struct {
-	Hash                 string     `json:"hash"`
-	Score                string     `json:"score"`
-	Name                 string     `json:"filename"`
-	SuggestedThreatLabel string     `json:"threat_name"`
-	IPs                  []IPDetail `json:"downloaded_by,omitempty"`
+	Hash                 string         `json:"hash,omitempty"`
+	Score                string         `json:"score,omitempty"`
+	Name                 string         `json:"filename,omitempty"`
+	SuggestedThreatLabel string         `json:"threat_name,omitempty"`
+	IPs                  []DownloadedIP `json:"downloaded_by,omitempty"`
 }
-type IPDetail struct {
+type DownloadedIP struct {
 	IPs             string   `json:"ip,omitempty"`
 	ResolvedDomains []string `json:"resolved_domains,omitempty"`
-	Country         string   `json:"country"`
-	ASN             string   `json:"org"`
+	Country         string   `json:"country,omitempty"`
+	ASN             string   `json:"org,omitempty"`
 }

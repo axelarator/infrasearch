@@ -9,6 +9,20 @@ import (
 	"strings"
 )
 
+func getGeolocation(ip string) (DownloadedIP, error) {
+	url := fmt.Sprintf("https://ipinfo.io/%s/json?token=%s", ip, os.Getenv("IPINFO_TOKEN"))
+	resp, err := http.Get(url)
+	if err != nil {
+		return DownloadedIP{}, err
+	}
+	defer resp.Body.Close()
+	var geo DownloadedIP
+	if err := json.NewDecoder(resp.Body).Decode(&geo); err != nil {
+		return DownloadedIP{}, err
+	}
+	return geo, nil
+}
+
 func rDNS(ip string) ([]string, error) {
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(ip+".in-addr.arpa."), dns.TypePTR)
@@ -17,7 +31,7 @@ func rDNS(ip string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var domains []string
+	domains := make([]string, 0)
 	for _, ans := range resp.Answer {
 		if ptr, ok := ans.(*dns.PTR); ok {
 			domains = append(domains, strings.TrimSuffix(ptr.Ptr, "."))
@@ -25,27 +39,3 @@ func rDNS(ip string) ([]string, error) {
 	}
 	return domains, nil
 }
-
-func getGeolocation(ip string) (IPDetail, error) {
-	url := fmt.Sprintf("https://ipinfo.io/%s/json?token=%s", ip, os.Getenv("IPINFO_TOKEN"))
-	resp, err := http.Get(url)
-	if err != nil {
-		return IPDetail{}, err
-	}
-	defer resp.Body.Close()
-	var geo IPDetail
-	if err := json.NewDecoder(resp.Body).Decode(&geo); err != nil {
-		return IPDetail{}, err
-	}
-
-	return IPDetail{Country: geo.Country, ASN: geo.ASN}, nil
-}
-
-//func reverseIP(ip string) string {
-//	parts := strings.Split(ip, ".")
-//	if len(parts) != 4 {
-//		return ""
-//	}
-//	return fmt.Sprintf("%s.%s.%s.%s", parts[3], parts[2], parts[1], parts[0])
-//
-//}

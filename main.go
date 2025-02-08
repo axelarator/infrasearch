@@ -32,14 +32,15 @@ func main() {
 	}
 	input := os.Args[1]
 	if strings.Contains(input, ".txt") {
-		ips, err = vt.IPFile(input)
+		ips, _ = vt.IPFile(input)
 	} else {
 		ips = []string{input}
 	}
 
-	results := v.BulkSearch(ips)
+	//results := v.BulkSearch(ips)
+	finalData := v.BulkSearch(ips)
 
-	jsonOutput, err := json.MarshalIndent(results, "", "  ")
+	jsonOutput, err := json.MarshalIndent(finalData, "", "  ")
 	if err != nil {
 		errorJSON, _ := json.Marshal(map[string]string{"error": err.Error()})
 		fmt.Println(string(errorJSON))
