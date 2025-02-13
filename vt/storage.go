@@ -413,7 +413,8 @@ type HashSearch struct {
 }
 
 type FinalOutput struct {
-	IPs []IPData `json:"ips"`
+	IPs      []IPData        `json:"ips"`
+	Overlaps OverlapAnalysis `json:"overlaps"`
 }
 
 type IPData struct {
@@ -430,7 +431,13 @@ type HashInfo struct {
 }
 type DownloadedIP struct {
 	IPs             string   `json:"ip,omitempty"`
+	Score           string   `json:"score,omitempty"`
 	ResolvedDomains []string `json:"resolved_domains,omitempty"`
 	Country         string   `json:"country,omitempty"`
 	ASN             string   `json:"org,omitempty"`
+}
+
+type OverlapAnalysis struct {
+	SharedHashes     map[string][]string `json:"shared_hashes,omitempty"`
+	SharedDownloaded map[string][]string `json:"shared_downloaded,omitempty"`
 }

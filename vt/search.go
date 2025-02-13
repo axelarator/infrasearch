@@ -40,16 +40,17 @@ func (s *Client) HostSearch(q string) (IPData, error) {
 		threatLabel := value.Attributes.PopularThreatClassification.SuggestedThreatLabel
 		analysisCount := value.Attributes.LastAnalysisStats.Malicious + value.Attributes.LastAnalysisStats.Undetected
 		maliciousScore := fmt.Sprintf("%v / %v", value.Attributes.LastAnalysisStats.Malicious, analysisCount)
-		ips, err := s.HashSearch(sha256)
+		ips, scores, err := s.HashSearch(sha256)
 		if err != nil {
 			continue
 		}
 		var downloadedBy []DownloadedIP
-		for _, ip := range ips {
+		for i, ip := range ips {
 			domains, _ := rDNS(ip)
 			geoInfo, _ := getGeolocation(ip)
 			downloadedBy = append(downloadedBy, DownloadedIP{
 				IPs:             ip,
+				Score:           scores[i],
 				ResolvedDomains: domains,
 				Country:         geoInfo.Country,
 				ASN:             geoInfo.ASN,
@@ -69,7 +70,7 @@ func (s *Client) HostSearch(q string) (IPData, error) {
 
 // next part is for downloaded files > ITW IPs
 
-func (s *Client) HashSearch(h string) ([]string, error) {
+func (s *Client) HashSearch(h string) ([]string, []string, error) {
 	url := fmt.Sprintf("%s/files/%s/itw_ips?limit=10", BaseUrl, h)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("accept", "application/json")
@@ -81,13 +82,20 @@ func (s *Client) HashSearch(h string) ([]string, error) {
 
 	var ret HashSearch
 	if err := json.NewDecoder(res.Body).Decode(&ret); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var ips []string
+	var scores []string
 	for _, value := range ret.Data {
 		ips = append(ips, value.Id)
+		// same logic to calculate malicious score for hashes
+		analysisCount := value.Attributes.LastAnalysisStats.Malicious + value.Attributes.LastAnalysisStats.Suspicious +
+			value.Attributes.LastAnalysisStats.Undetected + value.Attributes.LastAnalysisStats.Harmless
+		maliciousScore := fmt.Sprintf("%v / %v", value.Attributes.LastAnalysisStats.Malicious, analysisCount)
+		scores = append(scores, maliciousScore)
+
 	}
-	return ips, nil
+	return ips, scores, nil
 }
 
 // IPFile reads through a file to assign ips to a slice
@@ -122,9 +130,6 @@ func (s *Client) BulkSearch(ips []string) FinalOutput {
 		go func(ip string) {
 			defer wg.Done()
 			data, _ := s.HostSearch(ip)
-			//if err != nil {
-			//	data = IPData{NoData: "Error retrieving data"}
-			//}
 			resultChan <- data
 		}(ip)
 	}
@@ -132,98 +137,54 @@ func (s *Client) BulkSearch(ips []string) FinalOutput {
 		wg.Wait()
 		close(resultChan)
 	}()
-	//var results []IPData
 	for result := range resultChan {
 		results.IPs = append(results.IPs, result)
 	}
-	//printCorrelation(results)
-	return results
 
+	results.Overlaps = detectOverlaps(results)
+
+	return results
 }
 
-//func (s *Client) BuildFinalOutput(inputIPs []string) (FinalOutput, error) {
-//	var finalData FinalOutput
-//	finalData.IPs = make([]IPData, 0)
-//
-//	for _, ip := range inputIPs {
-//		ipEntry := IPData{
-//			IP:     ip,
-//			Hashes: make([]HashInfo, 0),
-//		}
-//		hostData, err := s.HostSearch(ip)
-//		if err != nil {
-//			fmt.Printf("Error retrieving host data for ip %s: %v", ip, err)
-//			finalData.IPs = append(finalData.IPs, ipEntry)
-//			continue
-//		}
-//		//if hostData == nil {
-//		//	continue
-//		//}
-//		//if len(hostData.Data) == 0 {
-//		//	finalData.IPs = append(finalData.IPs, ipEntry)
-//		//	continue
-//		//}
-//
-//		for _, file := range hostData.Data {
-//			attr := file.Attributes
-//			hash := attr.Sha256
-//			score := attr.LastAnalysisStats
-//			total := score.Harmless + score.Malicious + score.Suspicious + score.Timeout + score.Undetected
-//			//if total > 0 {
-//			//	scoreStr = fmt.Sprintf("%d / %d", score.Malicious+score.Suspicious, total)
-//			//} else {
-//			//	scoreStr = "0 / 0"
-//			//}
-//			scoreStr := fmt.Sprintf("%d / %d", score.Malicious+score.Suspicious, total)
-//
-//			filename := ""
-//			if len(attr.Names) > 0 {
-//				filename = attr.Names[0]
-//			}
-//			threatName := attr.PopularThreatClassification.SuggestedThreatLabel
-//
-//			hashResult, err := s.HashSearch(hash)
-//			if err != nil {
-//				fmt.Printf("Error retrieving hash for ip %s: %v", ip, err)
-//				continue
-//			}
-//			downloadedBy := make([]DownloadedIP, 0)
-//			// Use this if duplicates appear
-//			//downloadedBy := make([]DownloadedIP, 0)
-//			//seenIPs := make(map[string]bool)
-//
-//			for _, itwIP := range hashResult.Data {
-//				//if seenIPs[itwIP.Id] {
-//				//	continue
-//				//}
-//				geo, geoErr := getGeolocation(itwIP.Id)
-//				rdns, _ := rDNS(itwIP.Id)
-//				if geoErr != nil {
-//					downloadedBy = append(downloadedBy, DownloadedIP{
-//						IPs: itwIP.Id,
-//						//ResolvedDomains: []string{},
-//						//Country:         "",
-//						//ASN:             "",
-//					})
-//				} else {
-//					downloadedBy = append(downloadedBy, DownloadedIP{
-//						IPs:             itwIP.Id,
-//						ResolvedDomains: rdns,
-//						Country:         geo.Country,
-//						ASN:             geo.ASN,
-//					})
-//				}
-//			}
-//			downloadEntry := HashInfo{
-//				Hash:                 hash,
-//				Score:                scoreStr,
-//				Name:                 filename,
-//				SuggestedThreatLabel: threatName,
-//				IPs:                  downloadedBy,
-//			}
-//			ipEntry.Hashes = append(ipEntry.Hashes, downloadEntry)
-//		}
-//		finalData.IPs = append(finalData.IPs, ipEntry)
-//	}
-//	return finalData, nil
-//}
+func detectOverlaps(results FinalOutput) OverlapAnalysis {
+	// final storage for output
+	sharedHashes := make(map[string][]string)
+	sharedDownloaded := make(map[string][]string)
+	// temp output in for loops
+	hashToIPs := make(map[string][]string)
+	itwIPToHashes := make(map[string][]string)
+	// loop through finaloutput
+	for _, result := range results.IPs {
+		// loop through found hashes
+		for _, download := range result.Hashes {
+			// each hash is a key, the value is the searched IP
+			hashToIPs[download.Hash] = append(hashToIPs[download.Hash], result.IP)
+			// now loop through all downloaded_by IPs
+			for _, itw := range download.IPs {
+				// each downloaded_by IP is a key, the vaue is the hash
+				itwIPToHashes[itw.IPs] = append(itwIPToHashes[itw.IPs], download.Hash)
+			}
+		}
+	}
+
+	for hash, ipList := range hashToIPs {
+		// looking for duplicates so there needs to be more than 1
+		if len(ipList) > 1 {
+			// hash gets mapped to the searched IP
+			sharedHashes[hash] = ipList
+		}
+	}
+
+	for ip, hashList := range itwIPToHashes {
+		// if an ITW IP lists more than one hash, add to the slice
+		if len(hashList) > 1 {
+			sharedDownloaded[ip] = hashList
+		}
+	}
+
+	return OverlapAnalysis{
+		SharedHashes:     sharedHashes,
+		SharedDownloaded: sharedDownloaded,
+	}
+
+}

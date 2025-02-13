@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"infrasearch/vt"
@@ -40,6 +41,7 @@ func main() {
 	//results := v.BulkSearch(ips)
 	finalData := v.BulkSearch(ips)
 
+	// JSON things
 	jsonOutput, err := json.MarshalIndent(finalData, "", "  ")
 	if err != nil {
 		errorJSON, _ := json.Marshal(map[string]string{"error": err.Error()})
@@ -50,6 +52,37 @@ func main() {
 	writeErr := os.WriteFile("out.json", jsonOutput, 0644)
 	if writeErr != nil {
 		log.Fatal(writeErr)
+	}
+
+	// CSV things
+	csvFile, err := os.Create("out.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer csvFile.Close()
+
+	writer := csv.NewWriter(csvFile)
+	defer writer.Flush()
+	writer.Write([]string{"Searched IP", "Files Downloaded", "Malicious File Score", "Filename", "Threat Name",
+		"Downloaded From", "Malicious IP Score", "Country", "ASN", "Resolved Domain"})
+
+	for _, result := range finalData.IPs {
+		for _, download := range result.Hashes {
+			for _, itw := range download.IPs {
+				writer.Write([]string{
+					result.IP,
+					download.Hash,
+					download.Score,
+					download.Name,
+					download.SuggestedThreatLabel,
+					itw.IPs,
+					itw.Score,
+					itw.Country,
+					itw.ASN,
+					strings.Join(itw.ResolvedDomains, ", "),
+				})
+			}
+		}
 	}
 }
 
